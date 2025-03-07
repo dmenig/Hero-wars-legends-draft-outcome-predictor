@@ -72,6 +72,29 @@ heroes_correspondances = {
     66: "folio",
     67: "artemis",
     68: "dorian",
+    69: "mojo",
+    70: "thea",
+    71: "aidan",
+    72: "arachne",
+    73: "galaad",
+    74: "fox",
+    75: "yasmine",
+    76: "aurora",
+    77: "kayla",
+    78: "qingmao",
+    79: "cleaver",
+    80: "kai",
+    81: "peech",
+    82: "thea",
+    83: "jet",
+    84: "amira",
+    85: "chabba",
+    86: "phobos",
+    87: "dante",
+    88: "mushy",
+    89: "lars",
+    90: "alvanor",
+    91: "lilith",
 }
 from bidict import bidict
 
@@ -135,18 +158,14 @@ class SimpleFightPredictor(nn.Module):
         return self.final_fc(combined_rep)  # Shape: (batch_size, 1)
 
 
-
-
-
 # Load your model
 @st.cache_resource
 def load_model():
-    model = SimpleFightPredictor(
-        num_heroes=num_heroes, hidden_dim=128, dropout_rate=0
-    )
+    model = SimpleFightPredictor(num_heroes=num_heroes, hidden_dim=128, dropout_rate=0)
     model.load_state_dict(torch.load("best_model.pth"))
     model = model.eval()
     return model
+
 
 model = load_model()
 
@@ -157,8 +176,12 @@ st.title("🎈 Hero wars Legends Draft outcome prediction")
 options = sorted(list(correspondances.keys()))
 level_options = [3, 4, 5, 6]
 # User input section with dropdowns
-st.write("Please send you fight screenshots at menigauxdamien@hotmail.fr to improve the algorithm :) (don't compress the images !)")
-st.write("Select the teams and predict the fight outcome for the attack team. The order doesn't matter.")
+st.write(
+    "Please send you fight screenshots at menigauxdamien@hotmail.fr to improve the algorithm :) (don't compress the images !)"
+)
+st.write(
+    "Select the teams and predict the fight outcome for the attack team. The order doesn't matter."
+)
 
 # Define columns for Attack and Defense inputs
 col1, col2 = st.columns(2)
@@ -171,9 +194,13 @@ with col1:
     for i in range(5):
         row = st.columns(2)
         with row[0]:
-            hero_input = st.selectbox(f"Hero", options, index=0, key=f"input_{i}_hero_attack")
+            hero_input = st.selectbox(
+                f"Hero", options, index=0, key=f"input_{i}_hero_attack"
+            )
         with row[1]:
-            level_input = st.selectbox(f"Star level", level_options, index=0, key=f"input_{i}_level_attack")
+            level_input = st.selectbox(
+                f"Star level", level_options, index=0, key=f"input_{i}_level_attack"
+            )
         attack_hero_inputs.append(hero_input)
         attack_level_inputs.append(level_input)
 
@@ -185,9 +212,13 @@ with col2:
     for i in range(5):
         row = st.columns(2)
         with row[0]:
-            hero_input = st.selectbox(f"Hero", options, index=0, key=f"input_{i}_hero_defense")
+            hero_input = st.selectbox(
+                f"Hero", options, index=0, key=f"input_{i}_hero_defense"
+            )
         with row[1]:
-            level_input = st.selectbox(f"Star level", level_options, index=0, key=f"input_{i}_level_defense")
+            level_input = st.selectbox(
+                f"Star level", level_options, index=0, key=f"input_{i}_level_defense"
+            )
         defense_hero_inputs.append(hero_input)
         defense_level_inputs.append(level_input)
 
@@ -201,15 +232,17 @@ if st.button("Predict"):
     for hero_name, hero_level in zip(defense_hero_inputs, defense_level_inputs):
         opposing_team[0, correspondances[hero_name]] = (hero_level - 2.0) / 4.0
 
-
     # Make prediction
     with torch.no_grad():
-        prediction = model(team_tensor, opposing_team)[0].item()  # Convert tensor to scalar
-    
+        prediction = model(team_tensor, opposing_team)[
+            0
+        ].item()  # Convert tensor to scalar
+
     # Display prediction
-    st.write(f"Attack team has a {round(100*prediction, 2)}% chance to win")
+    st.write(f"Attack team has a {round(100 * prediction, 2)}% chance to win")
 
 import numpy as np
+
 # Create a button to make predictions
 if st.button("Advise"):
     # Prepare the input tensor (modify based on your model’s expected input format)
@@ -229,23 +262,36 @@ if st.button("Advise"):
         hero_alternate_teams = torch.clone(team_tensor).repeat(num_heroes, 1)
         hero_to_swap = heroes_to_swap[hero_index_to_swap][1].item()
         hero_level = team_tensor[0, hero_to_swap]
-        hero_swap_options = {} 
+        hero_swap_options = {}
         for hero_id in range(num_heroes):
-            hero_alternate_teams[hero_id, hero_to_swap] = 0.
+            hero_alternate_teams[hero_id, hero_to_swap] = 0.0
             hero_alternate_teams[hero_id, hero_id] = hero_level
         with torch.no_grad():
-            prediction = model(hero_alternate_teams, opposing_team.repeat(num_heroes, 1)).numpy().ravel()
+            prediction = (
+                model(hero_alternate_teams, opposing_team.repeat(num_heroes, 1))
+                .numpy()
+                .ravel()
+            )
         best_heroes = np.argsort(prediction)
         for hero_id in best_heroes[::-1]:
             if hero_id not in attack_heroes_ids:
                 win_probability = prediction[hero_id]
                 best_hero_to_swap_for = hero_id
                 break
-        heroes_swap_options[correspondances.inverse[hero_to_swap]] = [correspondances.inverse[best_hero_to_swap_for], win_probability]
-    hero_to_swap, (chosen_hero, better_win_probability) = max(heroes_swap_options.items(), key=lambda x:x[1][1])
+        heroes_swap_options[correspondances.inverse[hero_to_swap]] = [
+            correspondances.inverse[best_hero_to_swap_for],
+            win_probability,
+        ]
+    hero_to_swap, (chosen_hero, better_win_probability) = max(
+        heroes_swap_options.items(), key=lambda x: x[1][1]
+    )
     if better_win_probability > current_win_probability:
         better_win_probability = round(100 * better_win_probability, 2)
         # Display prediction
-        st.write(f"Swap out {hero_to_swap} for {chosen_hero} to increase your win probability to {better_win_probability:.2f}%")
+        st.write(
+            f"Swap out {hero_to_swap} for {chosen_hero} to increase your win probability to {better_win_probability:.2f}%"
+        )
     else:
-        st.write(f"According to me, any swapout would reduce the win probability against the current defense team.")
+        st.write(
+            f"According to me, any swapout would reduce the win probability against the current defense team."
+        )
