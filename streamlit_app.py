@@ -98,7 +98,9 @@ heroes_correspondances = {
     92: "polaris",
     93: "polaris",
     94: "artemis",
+    95: "guus",
 }
+
 from bidict import bidict
 
 correspondances = bidict(
